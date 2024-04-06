@@ -1,2 +1,51 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+import cv2 
+import dlib
+import numpy as np
+
+
+face_recognition_model = dlib.face_recognition_model_v1("dlib_face_recognition_resnet_model_v1.dat")
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+
+image2_bgr = cv2.imread("face1.jpg")
+image2 = cv2.cvtColor(image2_bgr,cv2.COLOR_BGR2RGB)
+face2_detected = detector(image2,1)
+
+if len(face2_detected)==0:
+     print("С таким не работаем")
+     exit()
+
+face2_full_obj = predictor(image2,face2_detected[0])
+face2_encoding = np.array(face_recognition_model.compute_face_descriptor(image2,face2_full_obj))
+
+cap = cv2.VideoCapture(0)
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+       break
+
+    rgb_frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+    detected_frame = detector(rgb_frame,1)
+
+    for face in detected_frame:
+         face_full_obj = predictor(rgb_frame, face)
+         face_encoding = np.array(face_recognition_model.compute_face_descriptor(rgb_frame,face_full_obj))
+         eu_distance = np.linalg.norm((face_encoding-face2_encoding))
+
+         if eu_distance < 0.6:
+             print("Лица, скорее всего, принадлежат одному и тому же человеку")
+         else:
+             print("Лица, скорее всего, принадлежат разным людям")
+
+         cv2.rectangle(frame,(face.left(),face.top()),(face.right(),face.bottom()),(0,255,0),2)
+     cv2.imshow("Face Recognition",frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+
+cap.release()
+cv2.destroyAllWindows()
